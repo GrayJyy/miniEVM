@@ -362,3 +362,31 @@ console.log(result);  // 输出: -6
 💡 `SHR`指令执行右移位操作，从堆栈中弹出两个元素，将第二个元素右移第一个元素位数，然后将结果推回栈顶。它的操作码是`0x1C`，gas消耗为`3`。
 
 </aside>
+
+## 内存指令
+
+### MSTORE(内存写)
+
+<aside>
+💡 `MSTORE`指令用于将一个256位（32字节）的值存储到内存中。它从堆栈中弹出两个元素，第一个元素为内存的地址（偏移量 offset），第二个元素为存储的值（value）。操作码是`0x52`，gas消耗根据实际内存使用情况计算（3+X）。
+
+</aside>
+
+```jsx
+mstore(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const offset = this.stack.pop()! // 获取内存偏移量
+    const value = this.stack.pop()! // 获取内存值
+    while (this.memory.length < offset + 32) {
+      this.memory = new Uint8Array([...this.memory, 0]) // 内存不足时，扩容
+    }
+    const valueBytes: Uint8Array = new Uint8Array(new Array(32).fill(0)) // 创建 32 字节的 Uint8Array
+    const binaryString = value.toString(2).padStart(256, '0') // 将 value 转换为 256 位的二进制字符串
+    for (let i = 0; i < 32; i++) {
+      const byteString = binaryString.slice(i * 8, (i + 1) * 8) // 将二进制字符串按字节分割并写入 Uint8Array
+      const byteValue = parseInt(byteString, 2) // 将二进制字符串转换为十进制
+      valueBytes[i] = byteValue // 将十进制写入 Uint8Array
+    }
+    this.memory.set(valueBytes, offset) // 将 Uint8Array 写入内存
+  }
+```

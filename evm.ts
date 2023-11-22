@@ -16,10 +16,12 @@ const XOR = 0x18
 const NOT = 0x19
 const SHL = 0x1b
 const SHR = 0x1c
+const MSTORE = 0x52
 class EVM {
   private code: Uint8Array // 每个 EVM 字节码指令占用一个字节（8 比特），EVM 字节码的指令范围是从 0x00 到 0xFF，共 256 个不同的指令
   private pc: number // 计数器
   private stack: number[] //堆栈
+  private memory: Uint8Array = new Uint8Array() // 内存
 
   constructor(code: Uint8Array) {
     this.code = code
@@ -149,6 +151,23 @@ class EVM {
     this.stack.push(shrResult)
   }
 
+  mstore(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const offset = this.stack.pop()! // 获取内存偏移量
+    const value = this.stack.pop()! // 获取内存值
+    while (this.memory.length < offset + 32) {
+      this.memory = new Uint8Array([...this.memory, 0]) // 内存不足时，扩容
+    }
+    const valueBytes: Uint8Array = new Uint8Array(new Array(32).fill(0)) // 创建 32 字节的 Uint8Array
+    const binaryString = value.toString(2).padStart(256, '0') // 将 value 转换为 256 位的二进制字符串
+    for (let i = 0; i < 32; i++) {
+      const byteString = binaryString.slice(i * 8, (i + 1) * 8) // 将二进制字符串按字节分割并写入 Uint8Array
+      const byteValue = parseInt(byteString, 2) // 将二进制字符串转换为十进制
+      valueBytes[i] = byteValue // 将十进制写入 Uint8Array
+    }
+    this.memory.set(valueBytes, offset) // 将 Uint8Array 写入内存
+  }
+
   run(): void {
     while (this.pc < this.code.length) {
       const op = this.nextInstruction()
@@ -188,9 +207,12 @@ class EVM {
         this.shl()
       } else if (op === SHR) {
         this.shr()
+      } else if (op === MSTORE) {
+        this.mstore()
       }
     }
-    console.log(this.stack) // 测试堆栈
+    console.log('stack', this.stack) // 测试堆栈
+    console.log(this.memory.subarray(0x20, 0x40)) // 测试内存));
   }
 }
 
@@ -276,6 +298,11 @@ const testShr = () => {
   const evm = new EVM(code)
   evm.run() // 输出:  [1]
 }
+const testMstore = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x20, 0x52]) // mstore(32, 2)
+  const evm = new EVM(code)
+  evm.run() // 输出: [...,2] 前面为 31 位 0
+}
 
 testPush()
 testPop()
@@ -293,3 +320,4 @@ testXor()
 testNot()
 testShl()
 testShr()
+testMstore()
