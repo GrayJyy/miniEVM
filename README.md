@@ -1,5 +1,3 @@
-# 实现一个简单的typescript版本EVM虚拟机
-
 ## EVM执行模型
 
 1. 当一个交易被接收并准备执行时，以太坊会初始化一个新的执行环境并加载合约的字节码。
@@ -142,4 +140,80 @@ add(): void {
         const addResult = (item1 + item2) % (2 ** 256) // 防止溢出，结果为0～2^256-1
         this.stack.push(addResult)
     }
+```
+
+### 实现 MUL
+
+<aside>
+💡 `MUL`指令将堆栈的顶部两个元素相乘。操作码是`0x02`，gas消耗为`5`。
+
+</aside>
+
+```solidity
+const MUL = 0x02
+mul(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const mulResult = (item1 * item2) % 2 ** 256
+    this.stack.push(mulResult)
+  }
+```
+
+### 实现SUB
+
+<aside>
+💡 `SUB`指令从堆栈顶部弹出两个元素，然后计算第一个元素减去第二个元素，最后将结果推入堆栈。这个指令的操作码是`0x03`，gas消耗为`3` 。
+
+</aside>
+
+```solidity
+const SUB = 0x03
+sub(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const subResult = (item1 - item2) % 2 ** 256
+    this.stack.push(subResult)
+  }
+```
+
+### 实现 DIV
+
+<aside>
+💡 `DIV`指令从堆栈顶部弹出两个元素，然后将第一个元素除以第二个元素，最后将结果推入堆栈。如果第二个元素（除数）为0，则将0推入堆栈。这个指令的操作码是`0x04`，gas消耗为`5` 。
+
+</aside>
+
+```solidity
+const DIV = 0x04
+div(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    if (item2 === 0) {
+      this.stack.push(0)
+      return
+    }
+    const divResult = (item1 / item2) % 2 ** 256
+    this.stack.push(divResult)
+  }
+```
+
+### 实现 MOD
+
+<aside>
+💡 取模指令。这个指令会从堆栈中弹出两个元素，然后将第一个元素除以第二个元素的余数推入堆栈。如果第二个元素（除数）为0，结果为0。它的操作码是`0x06`，gas消耗为5。
+
+</aside>
+
+```solidity
+const MOD = 0x06
+mod(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const modResult = item2 !== 0 ? (item1 % item2) % 2 ** 256 : 0
+    this.stack.push(modResult)
+  }
 ```
