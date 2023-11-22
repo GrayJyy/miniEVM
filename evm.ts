@@ -10,7 +10,12 @@ const MOD = 0x06
 const LT = 0x10
 const GT = 0x11
 const EQ = 0x14
-
+const AND = 0x16
+const OR = 0x17
+const XOR = 0x18
+const NOT = 0x19
+const SHL = 0x1b
+const SHR = 0x1c
 class EVM {
   private code: Uint8Array // 每个 EVM 字节码指令占用一个字节（8 比特），EVM 字节码的指令范围是从 0x00 到 0xFF，共 256 个不同的指令
   private pc: number // 计数器
@@ -102,6 +107,48 @@ class EVM {
     this.stack.push(eqResult)
   }
 
+  and(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const andResult = item2 & item1
+    this.stack.push(andResult)
+  }
+  or(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const orResult = item2 | item1
+    this.stack.push(orResult)
+  }
+  xor(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const xorResult = item2 ^ item1
+    this.stack.push(xorResult)
+  }
+  not(): void {
+    if (this.stack.length < 1) throw new Error('Stack underflow')
+    const item = this.stack.pop()!
+    const notResult = ~item % 2 ** 256
+    this.stack.push(notResult)
+  }
+  shl(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const shlResult = item1 << item2
+    this.stack.push(shlResult)
+  }
+  shr(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const shrResult = item1 >> item2
+    this.stack.push(shrResult)
+  }
+
   run(): void {
     while (this.pc < this.code.length) {
       const op = this.nextInstruction()
@@ -129,6 +176,18 @@ class EVM {
         this.gt()
       } else if (op === EQ) {
         this.eq()
+      } else if (op === AND) {
+        this.and()
+      } else if (op === OR) {
+        this.or()
+      } else if (op === XOR) {
+        this.xor()
+      } else if (op === NOT) {
+        this.not()
+      } else if (op === SHL) {
+        this.shl()
+      } else if (op === SHR) {
+        this.shr()
       }
     }
     console.log(this.stack) // 测试堆栈
@@ -142,13 +201,11 @@ const testPush = () => {
   const evm = new EVM(code)
   evm.run() // 输出:  [1, 1]
 }
-
 const testPop = () => {
   const code = new Uint8Array([0x60, 0x01, 0x50])
   const evm = new EVM(code)
   evm.run() // 输出:  []
 }
-
 const testAdd = () => {
   const code = new Uint8Array([0x60, 0x02, 0x60, 0x03, 0x01])
   const evm = new EVM(code)
@@ -159,7 +216,6 @@ const testMul = () => {
   const evm = new EVM(code)
   evm.run() // 输出:  [6]
 }
-
 const testSub = () => {
   const code = new Uint8Array([0x60, 0x02, 0x60, 0x03, 0x03]) // 3 - 2
   const evm = new EVM(code)
@@ -190,6 +246,36 @@ const testEq = () => {
   const evm = new EVM(code)
   evm.run() // 输出:  [0]
 }
+const testAnd = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x16]) // 6 & 2 ->    110 & 010 = 010 = 2
+  const evm = new EVM(code)
+  evm.run() // 输出:  [2]
+}
+const testOr = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x17]) // 6 | 2 ->    110 | 010 = 110 = 6
+  const evm = new EVM(code)
+  evm.run() // 输出:  [6]
+}
+const testXor = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x18]) // 6 ^ 2 ->    110 ^ 010 = 100 = 4
+  const evm = new EVM(code)
+  evm.run() // 输出:  [4]
+}
+const testNot = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x19]) // ~2 ->    ～10 -> 00000000000000000000000000000010 -> 11111111111111111111111111111101 -> 10 -> 11 -> -3  (对于正整数, ～x = -x - 1;对于负整数, ～x = -x + 1)
+  const evm = new EVM(code)
+  evm.run() // 输出:  [-3]
+}
+const testShl = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x1b]) // 6 << 2 ->    110 << 2 = 11000 = 24
+  const evm = new EVM(code)
+  evm.run() // 输出:  [24]
+}
+const testShr = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x1c]) // 6 >> 2 ->    110 >> 2 = 001 = 1
+  const evm = new EVM(code)
+  evm.run() // 输出:  [1]
+}
 
 testPush()
 testPop()
@@ -201,3 +287,9 @@ testMod()
 testLt()
 testGt()
 testEq()
+testAnd()
+testOr()
+testXor()
+testNot()
+testShl()
+testShr()
