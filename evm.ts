@@ -20,27 +20,27 @@ const MSTORE = 0x52
 const MSTORE8 = 0x53
 class EVM {
   private code: Uint8Array // 每个 EVM 字节码指令占用一个字节（8 比特），EVM 字节码的指令范围是从 0x00 到 0xFF，共 256 个不同的指令
-  private pc: number // 计数器
+  private counter: number // 计数器
   private stack: number[] //堆栈
   private memory: Uint8Array = new Uint8Array() // 内存
 
   constructor(code: Uint8Array) {
     this.code = code
-    this.pc = 0
+    this.counter = 0
     this.stack = []
   }
 
   nextInstruction(): number {
-    const op = this.code[this.pc]
-    this.pc += 1
+    const op = this.code[this.counter]
+    this.counter += 1
     return op
   }
 
   push(size: number): void {
-    const data = this.code.slice(this.pc, this.pc + size) // 在这个例子里首次进来时计数器已经来到了1
+    const data = this.code.slice(this.counter, this.counter + size) // 在这个例子里首次进来时计数器已经来到了1
     const value = parseInt([...data].map(byte => byte.toString(16).padStart(2, '0')).join(''), 16)
     this.stack.push(value)
-    this.pc += size
+    this.counter += size
   }
 
   pop(): void {
@@ -179,7 +179,7 @@ class EVM {
   }
 
   run(): void {
-    while (this.pc < this.code.length) {
+    while (this.counter < this.code.length) {
       const op = this.nextInstruction()
       // 如果遇到PUSH操作，则执行
       if (op >= PUSH1 && op <= PUSH32) {
