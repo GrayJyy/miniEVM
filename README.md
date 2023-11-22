@@ -1,11 +1,11 @@
-## EVM执行模型
+# EVM执行模型
 
 1. 当一个交易被接收并准备执行时，以太坊会初始化一个新的执行环境并加载合约的字节码。
 2. 字节码被翻译成Opcode，被逐一执行。每个Opcodes代表一种操作，比如算术运算、逻辑运算、存储操作或者跳转到其他操作码。
 3. 每执行一个Opcodes，都要消耗一定数量的Gas。如果Gas耗尽或者执行出错，执行就会立即停止，所有的状态改变（除了已经消耗的Gas）都会被回滚。
 4. 执行完成后，交易的结果会被记录在区块链上，包括Gas的消耗、交易日志等信息。
 
-## Opcodes分类
+# Opcodes分类
 
 [EVM Codes](https://www.evm.codes/?fork=shanghai)
 
@@ -18,7 +18,7 @@
 - **控制流（Control Flow）指令**: 这些指令用于EVM的控制流操作，比如跳转`JUMP`和跳转目标`JUMPDEST`。
 - **上下文（Context）指令**: 这些指令用于获取交易和区块的上下文信息。例如，获取msg.sender（`CALLER`）和当前可用的gas（`GAS`）。
 
-## 一个简单的加法运算
+# 一个简单的加法运算
 
 ```bash
 PUSH1 0x01
@@ -28,7 +28,7 @@ PUSH0
 MSTORE
 ```
 
-## Typescript版本的简单EVM计数器
+# Typescript版本的简单EVM
 
 ```tsx
 class EVM {
@@ -64,6 +64,8 @@ const code = new Uint8Array([0x60, 0x01, 0x60, 0x01, 0x50])
 const evm = new EVM(code)
 evm.run()
 ```
+
+## 算数指令
 
 ### 实现PUSH
 
@@ -215,5 +217,46 @@ mod(): void {
     const item2 = this.stack.pop()!
     const modResult = item2 !== 0 ? (item1 % item2) % 2 ** 256 : 0
     this.stack.push(modResult)
+  }
+```
+
+## 比较指令
+
+<aside>
+💡 `LT`指令从堆栈中弹出两个元素，比较第二个元素是否小于第一个元素。如果是，那么将`1`推入堆栈，否则将`0`推入堆栈。如果堆栈元素不足两个，那么会抛出异常。这个指令的操作码是`0x10`，gas消耗为`3`。
+
+</aside>
+
+<aside>
+💡 `GT`指令和`LT`指令非常类似，不过它比较的是第二个元素是否大于第一个元素。操作码是`0x11`，gas消耗为`3`。
+
+</aside>
+
+<aside>
+💡 `EQ`指令从堆栈中弹出两个元素，如果两个元素相等，那么将`1`推入堆栈，否则将`0`推入堆栈。该指令的操作码是`0x14`，gas消耗为`3`。
+
+</aside>
+
+```solidity
+lt(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const ltResult = item1 < item2 ? 1 : 0
+    this.stack.push(ltResult)
+  }
+  gt(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const gtResult = item1 > item2 ? 1 : 0
+    this.stack.push(gtResult)
+  }
+  eq(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const eqResult = item2 === item1 ? 1 : 0
+    this.stack.push(eqResult)
   }
 ```

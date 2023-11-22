@@ -7,6 +7,9 @@ const MUL = 0x02
 const SUB = 0x03
 const DIV = 0x04
 const MOD = 0x06
+const LT = 0x10
+const GT = 0x11
+const EQ = 0x14
 
 class EVM {
   private code: Uint8Array // 每个 EVM 字节码指令占用一个字节（8 比特），EVM 字节码的指令范围是从 0x00 到 0xFF，共 256 个不同的指令
@@ -77,6 +80,27 @@ class EVM {
     const modResult = item2 !== 0 ? (item1 % item2) % 2 ** 256 : 0
     this.stack.push(modResult)
   }
+  lt(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const ltResult = item1 < item2 ? 1 : 0
+    this.stack.push(ltResult)
+  }
+  gt(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const gtResult = item1 > item2 ? 1 : 0
+    this.stack.push(gtResult)
+  }
+  eq(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const item1 = this.stack.pop()!
+    const item2 = this.stack.pop()!
+    const eqResult = item2 === item1 ? 1 : 0
+    this.stack.push(eqResult)
+  }
 
   run(): void {
     while (this.pc < this.code.length) {
@@ -99,6 +123,12 @@ class EVM {
         this.div()
       } else if (op === MOD) {
         this.mod()
+      } else if (op === LT) {
+        this.lt()
+      } else if (op === GT) {
+        this.gt()
+      } else if (op === EQ) {
+        this.eq()
       }
     }
     console.log(this.stack) // 测试堆栈
@@ -145,6 +175,21 @@ const testMod = () => {
   const evm = new EVM(code)
   evm.run() // 输出:  [0]
 }
+const testLt = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x10]) // 6 < 2
+  const evm = new EVM(code)
+  evm.run() // 输出:  [0]
+}
+const testGt = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x11]) // 6 > 2
+  const evm = new EVM(code)
+  evm.run() // 输出:  [1]
+}
+const testEq = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x06, 0x14]) // 6 == 2
+  const evm = new EVM(code)
+  evm.run() // 输出:  [0]
+}
 
 testPush()
 testPop()
@@ -153,3 +198,6 @@ testMul()
 testSub()
 testDiv()
 testMod()
+testLt()
+testGt()
+testEq()
