@@ -17,6 +17,7 @@ const NOT = 0x19
 const SHL = 0x1b
 const SHR = 0x1c
 const MSTORE = 0x52
+const MSTORE8 = 0x53
 class EVM {
   private code: Uint8Array // 每个 EVM 字节码指令占用一个字节（8 比特），EVM 字节码的指令范围是从 0x00 到 0xFF，共 256 个不同的指令
   private pc: number // 计数器
@@ -167,6 +168,15 @@ class EVM {
     }
     this.memory.set(valueBytes, offset) // 将 Uint8Array 写入内存
   }
+  mstore8(): void {
+    if (this.stack.length < 2) throw new Error('Stack underflow')
+    const offset = this.stack.pop()! // 获取内存偏移量
+    const value = this.stack.pop()! // 获取内存值
+    while (this.memory.length < offset + 32) {
+      this.memory = new Uint8Array([...this.memory, 0]) // 内存不足时，扩容
+    }
+    this.memory.set([value & 0xff], offset) // 取最低有效字节
+  }
 
   run(): void {
     while (this.pc < this.code.length) {
@@ -209,6 +219,8 @@ class EVM {
         this.shr()
       } else if (op === MSTORE) {
         this.mstore()
+      } else if (op === MSTORE8) {
+        this.mstore8()
       }
     }
     console.log('stack', this.stack) // 测试堆栈
@@ -303,6 +315,11 @@ const testMstore = () => {
   const evm = new EVM(code)
   evm.run() // 输出: [...,2] 前面为 31 位 0
 }
+const testMstore8 = () => {
+  const code = new Uint8Array([0x60, 0x02, 0x60, 0x20, 0x53]) // mstore8(32, 2)
+  const evm = new EVM(code)
+  evm.run()
+}
 
 testPush()
 testPop()
@@ -321,3 +338,4 @@ testNot()
 testShl()
 testShr()
 testMstore()
+testMstore8()
